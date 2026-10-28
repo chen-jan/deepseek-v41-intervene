@@ -37,6 +37,14 @@ Arms, per-request fields, captures, gates and known issues: `docs/USAGE.md`. Eng
 Gate rules: `docs/GATES.md`. Provider: `docs/PROVIDER.md`. CPU tests: `python -m pytest -q` and
 `bash tests/run_mock_gates.sh`.
 
+## Related work
+
+The per-request design (a vLLM plugin where each request says what to edit or read) follows UK AISI's
+[vllm-lens](https://github.com/UKGovernmentBEIS/vllm-lens). We used Celeste's
+[vllm-metamodels](https://github.com/ceselder/vllm-metamodels), a faster fork of vllm-lens, for our lens runs; this
+repo adds what that engine does not support on DeepSeek V4.1: edits at middle layers, edits during generation with
+CUDA graphs on, and removing or shifting a direction. No code is copied from either project.
+
 ## Licence
 
 MIT (`LICENSE`) for all code here. Nothing is copied from vLLM or DeepSeek: the engine wraps vLLM's modules at
