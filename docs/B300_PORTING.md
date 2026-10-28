@@ -62,7 +62,7 @@ keep everything else pinned.
 
 ## 3. Reference output from the edit/plain server (the request to repeat)
 
-The main session produces the B200 file. It is pending at the time of writing. Send the same request on B300:
+The B200 output is in `docs/reference/engine_b200_sham.json` (two repeats gave identical tokens). Send the same request on B300:
 
 ```
 POST http://127.0.0.1:8101/v1/completions     # edit engine, sham (or the plain server on :8100); header: API key

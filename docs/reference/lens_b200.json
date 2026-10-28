@@ -1,0 +1,151 @@
+{
+ "what": "lens fork (vllm031-dsv41, TP4 eager, 4x B200): stream means (base weights) and greedy lens bullets, 28 Oct 2026",
+ "text": "The capital of France is Paris. The capital of Germany is Berlin. The capital of Italy is",
+ "ids": [
+  0,
+  671,
+  6102,
+  294,
+  8760,
+  344,
+  11111,
+  16,
+  455,
+  6102,
+  294,
+  10322,
+  344,
+  17575,
+  16,
+  455,
+  6102,
+  294,
+  14251,
+  344
+ ],
+ "pos": [
+  10,
+  18,
+  19
+ ],
+ "norms": {
+  "22": [
+   61.1393,
+   65.4873,
+   51.3038
+  ],
+  "26": [
+   92.4607,
+   88.8057,
+   87.076
+  ],
+  "30": [
+   102.0706,
+   112.9176,
+   120.3838
+  ],
+  "34": [
+   134.2291,
+   162.1859,
+   158.1704
+  ]
+ },
+ "first8": {
+  "22": [
+   0.99609,
+   -0.04004,
+   2.125,
+   -0.71875,
+   0.05786,
+   0.03564,
+   0.25977,
+   -0.21289
+  ],
+  "26": [
+   1.21094,
+   0.27734,
+   2.76562,
+   -3.42188,
+   -0.03735,
+   0.64062,
+   -0.2002,
+   -0.20703
+  ],
+  "30": [
+   0.5625,
+   2.10938,
+   1.30469,
+   -3.95312,
+   -0.26562,
+   0.80859,
+   2.20312,
+   -1.25781
+  ],
+  "34": [
+   -0.29297,
+   1.57031,
+   -0.24121,
+   -2.76562,
+   1.32812,
+   1.19531,
+   3.9375,
+   -1.78906
+  ]
+ },
+ "rel26": [
+  {
+   "pos": 10,
+   "greedy": "* France is Paris, and the capital of Italy is Rome. Therefore, the capital"
+  },
+  {
+   "pos": 18,
+   "greedy": "* is Rome. The capital of Germany is Berlin. The capital of Spain is Rome"
+  },
+  {
+   "pos": 19,
+   "greedy": "* Rome (or possibly Brussels). The capital of Italy is Rome. Therefore, the"
+  }
+ ],
+ "ml22": [
+  {
+   "pos": 10,
+   "greedy": "* France is Paris. The capital of Germany is Berlin. The capital of Italy is"
+  },
+  {
+   "pos": 18,
+   "greedy": "* is Italy. The capital of Spain is Madrid. The country whose cuisine is Germany"
+  },
+  {
+   "pos": 19,
+   "greedy": "* Lisbon (or perhaps Madrid). The capital of Italy is Rome. The capital of"
+  }
+ ],
+ "ml30": [
+  {
+   "pos": 10,
+   "greedy": "* France is Paris; the capital of Germany is Berlin. Capital of Italy is Rome"
+  },
+  {
+   "pos": 18,
+   "greedy": "* is Rome. The capital of Italy is Rome. Another European country whose capital is"
+  },
+  {
+   "pos": 19,
+   "greedy": "* Rome (or its capital is Rome). The capital of Italy is Rome. Italy"
+  }
+ ],
+ "ml34": [
+  {
+   "pos": 10,
+   "greedy": "* Italy is Rome, and the capital of France is Paris. What country is Germany"
+  },
+  {
+   "pos": 18,
+   "greedy": "* is Rome. The capital of Italy is Rome. The country whose capital is Italy"
+  },
+  {
+   "pos": 19,
+   "greedy": "* Rome, and its capital is Rome. The Italian capital historically is Rome. Question"
+  }
+ ]
+}
