@@ -1,0 +1,11 @@
+# CPU-only test dependencies (laptop). Install torch from the CPU index to skip the CUDA wheels:
+#   pip install --index-url https://download.pytorch.org/whl/cpu torch
+#   pip install -r requirements-test.txt
+torch
+numpy
+safetensors
+pytest
+aiohttp
+starlette
+tokenizers
+triton            # CPU interpreter run of the edit kernel (tests/test_edit_math.py); skipped without it

@@ -1,0 +1,17 @@
+.env
+*.env
+!.env.example
+__pycache__/
+*.pyc
+.pytest_cache/
+/data/
+official_encoding/
+.venv/
+/logs/
+/arms/
+/captures/
+*.safetensors
+*.npz
+*.npy
+*.log
+.serve_key

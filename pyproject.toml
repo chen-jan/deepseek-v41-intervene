@@ -1,0 +1,18 @@
+# Do not install this into the venv the plain server uses: scripts/serve_engine.sh puts the repo on PYTHONPATH and
+# passes --worker-extension-cls dsv41_intervene.rpc.EditExt. The plugin entry point is only for an engine-only venv.
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dsv41-intervene"
+version = "0.1.0"
+description = "Per-request causal edits at DeepSeek V4.1 mHC layer outputs on vLLM 0.31"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.entry-points."vllm.general_plugins"]
+dsv41_intervene = "dsv41_intervene.plugin:register"
+
+[tool.setuptools]
+packages = ["dsv41_intervene"]
