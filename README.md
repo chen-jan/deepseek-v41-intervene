@@ -37,6 +37,7 @@ Arms, per-request fields, captures, gates and known issues: `docs/USAGE.md`. Eng
 Gate rules: `docs/GATES.md`. Provider: `docs/PROVIDER.md`. CPU tests: `python -m pytest -q` and
 `bash tests/run_mock_gates.sh`.
 Multi-layer edits, captures and O-lens readouts (lens tool not yet run end to end from this repo): `docs/MULTILAYER.md`.
+- Porting to new GPUs (B300 / sm_103): what is compiled where, versions, reference checks, known problems: [docs/B300_PORTING.md](docs/B300_PORTING.md)
 
 ## Related work
 
