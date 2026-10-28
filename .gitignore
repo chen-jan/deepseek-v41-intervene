@@ -13,5 +13,6 @@ official_encoding/
 *.safetensors
 *.npz
 *.npy
+*.pt
 *.log
 .serve_key

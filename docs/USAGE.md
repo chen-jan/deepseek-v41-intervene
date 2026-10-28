@@ -208,6 +208,8 @@ modules (Apache-2.0) at runtime, and the provider loads DeepSeek's `encoding.py`
 | `dsv41_intervene/plugin.py` | `vllm.general_plugins` entry point | own |
 | `dsv41_intervene/auth.py` | API-key middleware | own |
 | `tools/arms.py`, `client.py`, `proxy.py`, `gates.py`, `retry_summary.py`, `build_data.py`, `dropcache.py`, `bench.sh`, `__init__.py` | arms files, client, proxy, gates, data builder, benches | own |
+| `tools/lens_read.py` | multi-layer O-lens readouts (`docs/MULTILAYER.md`) | own; imports the vllm-metamodels DeepSeek V4.1 build and its usage modules at runtime (not included) |
+| `examples/multilayer_capture.py` | several layers in one capture request | own |
 | `scripts/*.sh` | env build, download, key, serve, bench | own (call `uv`, `hf` and `vllm` CLIs) |
 | `tests/*` | CPU unit and integration tests, CPU mock engine, GPU kernel tests | own |
 | `provider/deepseek_v41_vllm_provider.py` | chat-encoding provider | own; follows the provider interface of [agent-interp-envs](https://github.com/gkroiz/agent-interp-envs) (MIT) and imports it when installed; no code copied. Loads DeepSeek's `encoding.py` at runtime (not included). |

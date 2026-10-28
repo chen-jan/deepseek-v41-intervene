@@ -36,6 +36,7 @@ bash scripts/serve_engine.sh      # or: edit engine on 127.0.0.1:8101 (+ python 
 Arms, per-request fields, captures, gates and known issues: `docs/USAGE.md`. Engine internals: `docs/INTERFACE.md`.
 Gate rules: `docs/GATES.md`. Provider: `docs/PROVIDER.md`. CPU tests: `python -m pytest -q` and
 `bash tests/run_mock_gates.sh`.
+Multi-layer edits, captures and O-lens readouts (lens tool not yet run end to end from this repo): `docs/MULTILAYER.md`.
 
 ## Related work
 

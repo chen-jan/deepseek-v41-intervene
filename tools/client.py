@@ -7,6 +7,8 @@ Control routes go to ``DSV41_ENGINE_URL`` (default ``http://127.0.0.1:8101``) on
     python tools/client.py installed | stats [--reset] | load PATH | dump PATH | global-arm K
     python tools/client.py score --data data/floor_prompts.json [--arm K --arms-sha SHA] --out X.json
     python tools/client.py --url http://127.0.0.1:8100 floor --out $DSV41_LOG_DIR/engine/floor_native_<ts>.json
+
+Several layers in one capture request per prompt: ``EngineClient.capture_layers`` (examples/multilayer_capture.py).
 """
 
 import argparse
@@ -26,8 +28,8 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from dsv41_intervene import env_path  # noqa: E402
-from tools.arms import record_global_arm, record_loaded_sha, request_fields  # noqa: E402
+from dsv41_intervene import MAX_EDIT_TO, env_path  # noqa: E402
+from tools.arms import layer_capture, load_dump, record_global_arm, record_loaded_sha, request_fields  # noqa: E402
 
 DEFAULT_URL = "http://127.0.0.1:8101"
 MODEL = "dsv41"
@@ -197,6 +199,78 @@ class EngineClient:
 
         with ThreadPoolExecutor(max(1, min(concurrency, len(prompts)))) as ex:
             return list(ex.map(one, prompts))
+
+    def capture_layers(self, prompts: list[list[int]], layers: list[int], dump_path: str, *, kind: str = "vec",
+                       arm: int = 0, arms_sha: str | None = None, cap_from: int | None = None,
+                       cap_to: int | None = None, cap_pos: list[list[int]] | None = None, edit_from: int = 1,
+                       edit_to: int = MAX_EDIT_TO, concurrency: int = 1, tag_prefix: str = "ml") -> dict:
+        """Capture several layers in one request per prompt, dump, and return the rows split by layer.
+
+        Uses only the existing capture interface (docs/INTERFACE.md sections 4, 6 and 8): one teacher-forced
+        ``score`` request per prompt with ``capture=kind`` and a unique tag, then ``dsv41_capture_dump`` and
+        ``tools/arms.py layer_capture``. What one request records:
+        - coefficients (``kind`` "coef" or "vec") at every installed slot: ``c``, ``c'`` and the pre-mix, along the read
+          direction ``p`` of the request's ``arm`` at that slot. Arm 0 (sham) reads nothing, so its ``c`` is 0; load an
+          arms file with a measure-only arm at ``layers`` to read your own direction there;
+        - stream-mean vectors (``kind="vec"``) at the boot-time capture layers only (``DSV41_CAPTURE_LAYERS``, default
+          ``12,15,18,22,25,26,27,30,34``), before that layer's own edit (edits at earlier slots do reach them).
+
+        ``layers`` must be installed slots, and capture layers when ``kind="vec"``. ``arms_sha`` defaults to the loaded
+        file's (a capture salt needs one). ``cap_pos`` is one position list per prompt (<= 4096 each); otherwise
+        ``[cap_from, cap_to)`` (engine default: every position). ``concurrency`` 1: one-by-one requests never hit the
+        batched-NaN problem in our runs (docs/USAGE.md, known issues).
+
+        The dump takes every row in the rings and clears them, so this refuses to start while the rings already hold
+        rows (another capture in progress, or an undumped one). ``dump_path`` must be a new file under the engine's
+        ``DSV41_CAPTURE_DIR``. Returns ``{"dump", "layers", "kind", "arm", "arms_sha", "coef_overflow",
+        "vec_overflow", "prompts": [layer_capture(...) + "tag", "nan_retries"]}``; check ``nonfinite_pos`` and
+        ``zero_coef_layers`` per prompt."""
+        if kind not in ("coef", "vec"):
+            raise ValueError(f"kind must be 'coef' or 'vec', got {kind!r}")
+        if cap_pos is not None and len(cap_pos) != len(prompts):
+            raise ValueError("cap_pos needs one position list per prompt")
+        inst = self.installed()
+        if not inst.get("installed", True):
+            raise EngineError("the edit patch is not installed on this server")
+        loaded = inst.get("arms_sha", "")
+        sha = arms_sha or loaded
+        if not sha or sha != loaded:
+            raise EngineError(f"arms sha {sha!r} is not the loaded one ({loaded!r}); load an arms file first "
+                              "(tools/client.py load)")
+        layers = [int(L) for L in layers]
+        missing = [L for L in layers if L not in inst["layers"]]
+        if missing:
+            raise ValueError(f"layers {missing} are not installed edit slots {inst['layers']}")
+        if kind == "vec":
+            missing = [L for L in layers if L not in inst["capture_layers"]]
+            if missing:
+                raise ValueError(f"no vector capture at {missing}: vectors exist only at the boot-time capture "
+                                 f"layers {inst['capture_layers']} (DSV41_CAPTURE_LAYERS); reboot with them or use "
+                                 "kind='coef'")
+        n_rows = sum(len(set(cap_pos[i])) if cap_pos is not None else
+                     len(range(max(cap_from or 0, 0), min(len(p), cap_to if cap_to is not None else len(p))))
+                     for i, p in enumerate(prompts))
+        room = {"coef": int(inst["coef_rows"]), **({"vec": int(inst["vec_rows"])} if kind == "vec" else {})}
+        full = {k: v for k, v in room.items() if n_rows > v}
+        if full:
+            raise ValueError(f"{n_rows} captured positions do not fit the {full} ring rows: split the prompts")
+        st = self.stats()
+        if st.get("coef_rows_used") or st.get("vec_rows_used"):
+            raise EngineError(f"the capture rings already hold {st.get('coef_rows_used')} coef / "
+                              f"{st.get('vec_rows_used')} vec rows; dump them first (the dump takes every row)")
+        tags = [f"{tag_prefix}{i}" for i in range(len(prompts))]
+        fields = [request_fields(arm, edit_from, edit_to, arms_sha=sha, capture=kind, cap_from=cap_from, cap_to=cap_to,
+                                 cap_pos=cap_pos[i] if cap_pos is not None else None, tag=tags[i])
+                  for i in range(len(prompts))]
+        with ThreadPoolExecutor(max(1, min(concurrency, len(prompts)))) as ex:
+            scored = list(ex.map(lambda i: self.score([prompts[i]], fields[i], concurrency=concurrency)[0],
+                                 range(len(prompts))))
+        dump = self.dump(dump_path)
+        arr, meta = load_dump(dump["path"])
+        out = [dict(layer_capture(arr, meta, layers, t), tag=t, nan_retries=s["nan_retries"])
+               for t, s in zip(tags, scored)]
+        return {"dump": dump["path"], "layers": layers, "kind": kind, "arm": arm, "arms_sha": sha,
+                "coef_overflow": meta.get("coef_overflow"), "vec_overflow": meta.get("vec_overflow"), "prompts": out}
 
 
 def fresh_salt(fields: dict) -> dict:

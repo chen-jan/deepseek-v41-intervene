@@ -378,6 +378,52 @@ def vec_means(dump: dict, meta: dict, layer: int, arm: int | None = None, tag: s
     return dump["vec"][sel][:, meta["capture_layers"].index(layer)].astype(np.float64)
 
 
+def layer_capture(dump: dict, meta: dict, layers: list[int], tag: str) -> dict:
+    """One prompt's rows of a capture dump, split by layer (docs/MULTILAYER.md, "Multi-layer capture").
+
+    A capture request writes, per captured token, one coefficient row covering every installed slot
+    (``meta["layers"]``) and, for ``capture="vec"``, one vector row covering every boot-time capture layer
+    (``meta["capture_layers"]``). This picks the rows of ``tag``'s last request (a NaN retry is a new request with the
+    same tag, sent after the failed one) and, inside it, the last row per position (a preempted and recomputed request
+    gets fresh rows).
+
+    Returns ``{"req", "coef_pos" [n], "coef": {L: [n, 3, 4]} (c before, c' after the bf16 cast, carried pre-mix; per
+    stream), "vec_pos" [m], "vec": {L: [m, 5120]} (pre-edit stream mean; only layers in ``capture_layers`` and only
+    if vectors were captured), "nonfinite_pos" (positions with a non-finite c, c' or vector at a requested layer;
+    flagged, not dropped), "zero_coef_layers" (requested layers where c is 0 on every row: the arm has no read
+    direction there, as for arm 0)}``. Raises ValueError for a layer that is not installed."""
+    import numpy as np
+
+    installed, cap_layers = list(meta["layers"]), list(meta["capture_layers"])
+    bad = [L for L in layers if L not in installed]
+    if bad:
+        raise ValueError(f"layers {bad} are not installed edit slots {installed}")
+    t = meta["tags"].index(tag) if tag in meta["tags"] else -2
+
+    def last_rows(ring: str):
+        sel = np.flatnonzero(dump[f"{ring}_tag"] == t)
+        if not sel.size:
+            return None, np.zeros(0, np.int64), np.zeros(0, np.int64)
+        req = int(dump[f"{ring}_req"][sel].max())
+        sel = sel[dump[f"{ring}_req"][sel] == req]
+        last = {int(p): int(r) for p, r in zip(dump[f"{ring}_pos"][sel], sel)}  # later rows overwrite earlier ones
+        pos = np.array(sorted(last), np.int64)
+        return req, pos, np.array([last[p] for p in pos], np.int64)
+
+    req, cpos, crows = last_rows("coef")
+    _, vpos, vrows = last_rows("vec")
+    coef = {L: dump["coef"][crows][:, installed.index(L)] for L in layers}
+    vec = {L: dump["vec"][vrows][:, cap_layers.index(L)] for L in layers if L in cap_layers} if vrows.size else {}
+    bad_pos = set()
+    for L, c in coef.items():
+        bad_pos.update(cpos[~np.isfinite(c[:, :2]).all(axis=(1, 2))].tolist())
+    for L, v in vec.items():
+        bad_pos.update(vpos[~np.isfinite(v).all(axis=1)].tolist())
+    zero = [L for L in layers if crows.size and not np.any(coef[L][:, 0])]
+    return {"req": req, "coef_pos": cpos, "coef": coef, "vec_pos": vpos, "vec": vec,
+            "nonfinite_pos": sorted(int(p) for p in bad_pos), "zero_coef_layers": zero}
+
+
 def main() -> None:
     """CLI: ``build`` (gate arms or a recipe JSON), ``mu``, ``controls``, ``fields``."""
     import numpy as np
